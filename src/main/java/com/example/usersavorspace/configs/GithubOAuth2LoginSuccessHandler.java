@@ -58,16 +58,21 @@ public class GithubOAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSucc
         String token = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
+        // Use UriComponentsBuilder to properly build and encode the URL
+        String redirectUrl = UriComponentsBuilder
+                .fromUriString("https://penguinman.me")
+                .path("/homepage") // Remove the # and use normal path
+                .queryParam("token", token)
+                .queryParam("refreshToken", refreshToken)
+                .build(false) // Don't encode twice
+                .toUriString();
+
+        // Set tokens in headers
         response.setHeader("Authorization", "Bearer " + token);
         response.setHeader("Refresh-Token", refreshToken);
+        response.setHeader("Access-Control-Expose-Headers", "Authorization, Refresh-Token");
 
-        // Use the production URL instead of localhost
-        String redirectUrl = String.format(
-                "https://penguinman.me/register?token=%s&refreshToken=%s",
-                URLEncoder.encode(token, StandardCharsets.UTF_8),
-                URLEncoder.encode(refreshToken, StandardCharsets.UTF_8)
-        );
-
+        // Perform the redirect
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 }

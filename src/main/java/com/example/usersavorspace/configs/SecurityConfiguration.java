@@ -120,7 +120,7 @@ public class SecurityConfiguration {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "https://penguinman.me", "https://penguinman-backend-production.up.railway.app")); // Allow requests from this origin
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "https://penguinman.me", "https://penguinman-backend-production.up.railway.app", "https://savorspace.systems")); // Allow requests from this origin
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);

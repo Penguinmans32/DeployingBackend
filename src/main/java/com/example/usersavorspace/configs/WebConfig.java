@@ -13,7 +13,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:5173,https://penguinman.me}")
+    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:5173,https://penguinman.me, https://savorspace.systems}")
     private String[] allowedOrigins;
 
     @Override
@@ -41,6 +41,9 @@ public class WebConfig implements WebMvcConfigurer {
         config.addAllowedOrigin("https://penguinman.me");
         config.addAllowedOrigin("http://penguinman.me");
         config.addAllowedOrigin("https://www.penguinman.me");
+        config.addAllowedOrigin("https://savorspace.systems");
+        config.addAllowedOrigin("http://savorspace.systems");
+        config.addAllowedOrigin("https://www.savorspace.systems");
         config.addAllowedOrigin("http://localhost:5173");
 
         config.addAllowedHeader("*");

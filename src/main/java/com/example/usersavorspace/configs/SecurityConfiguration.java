@@ -70,37 +70,38 @@ public class SecurityConfiguration {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Enable CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/auth/signup", "/auth/refresh-token", "/auth/email", "/auth/login-admin", "/auth/create-admin", "/auth/reactivate", "/auth/deactivate", "/auth/forgot-password").permitAll()
+                        .requestMatchers("/auth/login", "/auth/signup", "/auth/refresh-token",
+                                "/auth/email", "/auth/login-admin", "/auth/create-admin",
+                                "/auth/reactivate", "/auth/deactivate", "/auth/forgot-password",
+                                "/oauth2/**", "/login/oauth2/code/*").permitAll()
                         .requestMatchers("/auth/verify-token").authenticated()
-                        .requestMatchers("/Pictures/**", "/uploads/**", "/oauth2/**").permitAll()
+                        .requestMatchers("/Pictures/**", "/uploads/**").permitAll()
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/admin/comments/*", "/admin/recipes/*").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/comments/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/comments/**").permitAll()
                         .requestMatchers("/api/notifications/**").permitAll()
-                        .requestMatchers("/ws/**").permitAll()
-                        .requestMatchers("/ws").permitAll()
-                        .requestMatchers("/topic/**").permitAll()
-                        .requestMatchers("/topic").permitAll()
-                        .requestMatchers("/app/**").permitAll()
-                        .requestMatchers("/user/**").permitAll()
+                        .requestMatchers("/ws/**", "/ws", "/topic/**", "/topic", "/app/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/comments/*/flag").authenticated()
                         .requestMatchers("/users/change-password", "/users/*/reactivate").authenticated()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(authorization -> authorization
+                                .baseUri("/oauth2/authorization"))
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/login/oauth2/code/*"))
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                                 .userService(githubOAuth2UserService)
                         )
                         .successHandler((request, response, authentication) -> {
-
                             String clientRegistrationId = ((OAuth2AuthenticationToken) authentication)
                                     .getAuthorizedClientRegistrationId();
 
-                            if("github".equals(clientRegistrationId)) {
+                            if ("github".equals(clientRegistrationId)) {
                                 githubOAuth2LoginSuccessHandler.onAuthenticationSuccess(request, response, authentication);
                             } else {
                                 oAuth2LoginSuccessHandler.onAuthenticationSuccess(request, response, authentication);
@@ -119,7 +120,7 @@ public class SecurityConfiguration {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "https://penguinman.me")); // Allow requests from this origin
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "https://penguinman.me", "https://penguinman-backend-production.up.railway.app")); // Allow requests from this origin
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);

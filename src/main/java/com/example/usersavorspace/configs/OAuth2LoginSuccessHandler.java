@@ -50,7 +50,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         response.setHeader("Refresh-Token", refreshToken);
 
         getRedirectStrategy().sendRedirect(request, response,
-                "http://localhost:5173/register?" +
+                "https://penguinman.me/register?" +
                         "token=" + token + "&" +
                         "refreshToken=" + refreshToken
         );

@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 
@@ -60,13 +62,11 @@ public class GithubOAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSucc
         response.setHeader("Refresh-Token", refreshToken);
 
         // Use the production URL instead of localhost
-        String redirectUrl = UriComponentsBuilder
-                .fromUriString("https://penguinman.me/register")
-                .queryParam("token", token)
-                .queryParam("refreshToken", refreshToken)
-                .build()
-                .encode()
-                .toUriString();
+        String redirectUrl = String.format(
+                "https://penguinman.me/register?token=%s&refreshToken=%s",
+                URLEncoder.encode(token, StandardCharsets.UTF_8),
+                URLEncoder.encode(refreshToken, StandardCharsets.UTF_8)
+        );
 
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }

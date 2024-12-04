@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Component
@@ -47,12 +49,11 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         String refreshToken = jwtService.generateRefreshToken(user);
 
         // Build the frontend URL with proper encoding
-        String redirectUrl = UriComponentsBuilder.fromUriString("https://penguinman.me/register")
-                .queryParam("token", token)
-                .queryParam("refreshToken", refreshToken)
-                .build()
-                .encode()
-                .toUriString();
+        String redirectUrl = String.format(
+                "https://penguinman.me/register?token=%s&refreshToken=%s",
+                URLEncoder.encode(token, StandardCharsets.UTF_8),
+                URLEncoder.encode(refreshToken, StandardCharsets.UTF_8)
+        );
 
         // Set tokens in headers
         response.setHeader("Authorization", "Bearer " + token);

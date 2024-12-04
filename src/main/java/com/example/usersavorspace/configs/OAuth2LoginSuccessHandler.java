@@ -47,7 +47,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         String refreshToken = jwtService.generateRefreshToken(user);
 
         // Build the frontend URL with proper encoding
-        String redirectUrl = UriComponentsBuilder.fromUriString("https://penguinman.me/homepage")
+        String redirectUrl = UriComponentsBuilder.fromUriString("https://penguinman.me/register")
                 .queryParam("token", token)
                 .queryParam("refreshToken", refreshToken)
                 .build()

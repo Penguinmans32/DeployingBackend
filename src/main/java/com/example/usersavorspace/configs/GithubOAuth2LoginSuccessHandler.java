@@ -11,6 +11,7 @@ import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -32,12 +33,14 @@ public class GithubOAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSucc
         OAuth2User oidcUser = (OAuth2User) authentication.getPrincipal();
 
         String username = oidcUser.getAttribute("login");
-       String email = oidcUser.getAttribute("email");
-       String name = oidcUser.getAttribute("name");
-       String avatarUrl = oidcUser.getAttribute("avatar_url");
-       if(email == null && username != null) {
-           email = username + "@github.com";
-       }
+        String email = oidcUser.getAttribute("email");
+        String name = oidcUser.getAttribute("name");
+        String avatarUrl = oidcUser.getAttribute("avatar_url");
+
+        // Fallback email if GitHub email is private
+        if (email == null && username != null) {
+            email = username + "@github.com";
+        }
 
         String finalEmail = email;
         User user = userService.findByEmail(email).orElseGet(() -> {
@@ -56,10 +59,15 @@ public class GithubOAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSucc
         response.setHeader("Authorization", "Bearer " + token);
         response.setHeader("Refresh-Token", refreshToken);
 
-        getRedirectStrategy().sendRedirect(request, response,
-                "http://localhost:5173/register?" +
-                        "token=" + token + "&" +
-                        "refreshToken=" + refreshToken
-        );
+        // Use the production URL instead of localhost
+        String redirectUrl = UriComponentsBuilder
+                .fromUriString("https://penguinman.me/register")
+                .queryParam("token", token)
+                .queryParam("refreshToken", refreshToken)
+                .build()
+                .encode()
+                .toUriString();
+
+        getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 }

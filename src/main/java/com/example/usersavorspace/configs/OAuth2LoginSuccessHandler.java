@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -32,7 +33,6 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         String name = oidcUser.getFullName();
         String picture = oidcUser.getPicture();
 
-
         User user = userService.findByEmail(email).orElseGet(() -> {
             User newUser = new User();
             newUser.setEmail(email);
@@ -41,18 +41,24 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             newUser.setRole("USER");
             newUser.setPassword(UUID.randomUUID().toString());
             return userService.save(newUser);
-        }); 
+        });
 
         String token = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
+        // Build the frontend URL with proper encoding
+        String redirectUrl = UriComponentsBuilder.fromUriString("https://penguinman.me/homepage")
+                .queryParam("token", token)
+                .queryParam("refreshToken", refreshToken)
+                .build()
+                .encode()
+                .toUriString();
+
+        // Set tokens in headers
         response.setHeader("Authorization", "Bearer " + token);
         response.setHeader("Refresh-Token", refreshToken);
 
-        getRedirectStrategy().sendRedirect(request, response,
-                "https://penguinman.me/register?" +
-                        "token=" + token + "&" +
-                        "refreshToken=" + refreshToken
-        );
+        // Perform the redirect
+        getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 }

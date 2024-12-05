@@ -3,22 +3,33 @@ package com.example.usersavorspace.configs;
 import com.example.usersavorspace.services.CustomOAuth2UserService;
 import com.example.usersavorspace.services.GithubOAuth2UserService;
 import com.example.usersavorspace.services.JwtService;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.io.IOException;
 import java.util.List;
 
 @Configuration
@@ -75,7 +86,7 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/auth/signup", "/auth/refresh-token",
+                        .requestMatchers("/error","/auth/login", "/auth/signup", "/auth/refresh-token",
                                 "/auth/email", "/auth/login-admin", "/auth/create-admin",
                                 "/auth/reactivate", "/auth/deactivate", "/auth/forgot-password",
                                 "/oauth2/**", "/login/oauth2/code/*").permitAll()
@@ -97,8 +108,7 @@ public class SecurityConfiguration {
                         .redirectionEndpoint(redirection -> redirection
                                 .baseUri("/login/oauth2/code/*"))
                         .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOAuth2UserService)
-                                .userService(githubOAuth2UserService)
+                                .userService(compositeOAuth2UserService())
                         )
                         .successHandler((request, response, authentication) -> {
                             String clientRegistrationId = ((OAuth2AuthenticationToken) authentication)
@@ -115,9 +125,49 @@ public class SecurityConfiguration {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authenticationProvider(authenticationProvider)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.getWriter().write("Unauthorized" + authException.getMessage());
+                        })
+                );
 
         return http.build();
+    }
+
+    @Bean
+    public OAuth2UserService<OAuth2UserRequest, OAuth2User> compositeOAuth2UserService() {
+        return request -> {
+            String registrationId = request.getClientRegistration().getRegistrationId();
+            if ("google".equals(registrationId)) {
+                return customOAuth2UserService.loadUser(request);
+            } else if ("github".equals(registrationId)) {
+                return githubOAuth2UserService.loadUser(request);
+            }
+            throw new OAuth2AuthenticationException("Unsupported OAuth2 provider");
+        };
+    }
+
+    private class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
+        @Override
+        public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+                                            Authentication authentication) throws IOException, ServletException {
+            String clientRegistrationId = ((OAuth2AuthenticationToken) authentication)
+                    .getAuthorizedClientRegistrationId();
+
+            try {
+                if ("github".equals(clientRegistrationId)) {
+                    githubOAuth2LoginSuccessHandler.onAuthenticationSuccess(request, response, authentication);
+                } else {
+                    oAuth2LoginSuccessHandler.onAuthenticationSuccess(request, response, authentication);
+                }
+            } catch (Exception e) {
+                logger.error("Error in OAuth2 authentication success handler", e);
+                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                response.getWriter().write("Authentication error: " + e.getMessage());
+            }
+        }
     }
 
     @Bean

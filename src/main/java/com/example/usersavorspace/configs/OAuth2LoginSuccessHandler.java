@@ -67,21 +67,28 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             String token = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
 
-            String redirectUrl = UriComponentsBuilder
-                    .fromUriString("https://savorspace.systems")
-                    .path("/homepage")
-                    .queryParam("token", token)
-                    .queryParam("refreshToken", refreshToken)
-                    .build(true)
-                    .toUriString();
+            // Create the base URL first
+            String baseUrl = "https://savorspace.systems/homepage";
+
+            // Encode tokens separately
+            String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
+            String encodedRefreshToken = URLEncoder.encode(refreshToken, StandardCharsets.UTF_8);
+
+            // Build the complete URL manually
+            String redirectUrl = baseUrl +
+                    "?token=" + encodedToken +
+                    "&refreshToken=" + encodedRefreshToken;
 
             logger.debug("Redirecting to: {}", redirectUrl);
 
+            // Set response headers
             response.setHeader("Authorization", "Bearer " + token);
             response.setHeader("Refresh-Token", refreshToken);
             response.setHeader("Access-Control-Expose-Headers", "Authorization, Refresh-Token");
 
+            // Perform redirect
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
+
         } catch (Exception e) {
             logger.error("Error in OAuth2 success handler", e);
             response.sendRedirect("https://savorspace.systems/homepage?error=authentication_failed");

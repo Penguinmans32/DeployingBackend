@@ -65,34 +65,38 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             String token = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
 
-            // Encode the tokens properly
-            String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
-            String encodedRefreshToken = URLEncoder.encode(refreshToken, StandardCharsets.UTF_8);
+            // Create state parameter to prevent CSRF
+            String state = UUID.randomUUID().toString();
 
-            // Build the redirect URL manually
-            String baseUrl = "https://savorspace.systems";
-            String redirectUrl = String.format("%s/auth-callback?token=%s&refreshToken=%s",
-                    baseUrl, encodedToken, encodedRefreshToken);
+            // Build redirect URL with properly encoded parameters
+            String redirectUrl = UriComponentsBuilder
+                    .fromHttpUrl("https://savorspace.systems")
+                    .path("/auth-callback")
+                    .queryParam("token", token)
+                    .queryParam("refreshToken", refreshToken)
+                    .queryParam("state", state)
+                    .encode()
+                    .toUriString();
 
-            // Set tokens in cookies instead of headers
-            addTokenCookie(response, "auth_token", token);
-            addTokenCookie(response, "refresh_token", refreshToken);
+            // Set tokens in cookies as backup
+            Cookie tokenCookie = new Cookie("auth_token", token);
+            tokenCookie.setHttpOnly(true);
+            tokenCookie.setSecure(true);
+            tokenCookie.setPath("/");
+            response.addCookie(tokenCookie);
 
-            // Perform the redirect
+            Cookie refreshTokenCookie = new Cookie("refresh_token", refreshToken);
+            refreshTokenCookie.setHttpOnly(true);
+            refreshTokenCookie.setSecure(true);
+            refreshTokenCookie.setPath("/");
+            response.addCookie(refreshTokenCookie);
+
+            logger.info("Redirecting to: {}", redirectUrl);
+
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
-
         } catch (Exception e) {
             logger.error("Error in OAuth2 success handler", e);
-            response.sendRedirect("https://savorspace.systems/login?error=authentication_failed");
+            response.sendRedirect("https://savorspace.systems/login?error=auth_failed");
         }
-    }
-
-    private void addTokenCookie(HttpServletResponse response, String name, String value) {
-        Cookie cookie = new Cookie(name, value);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
-        response.addCookie(cookie);
     }
 }

@@ -68,6 +68,9 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .requiresChannel(channel -> channel
+                        .requestMatchers(r -> r.getHeader("X-Forwarded-Proto") != null)
+                        .requiresSecure())
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))

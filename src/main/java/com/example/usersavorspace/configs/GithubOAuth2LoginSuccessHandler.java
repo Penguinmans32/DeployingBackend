@@ -60,7 +60,7 @@ public class GithubOAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSucc
 
         // Use UriComponentsBuilder to properly build and encode the URL
         String redirectUrl = UriComponentsBuilder
-                .fromUriString("https://penguinman.me")
+                .fromUriString("https://savorspace.systems")
                 .path("/homepage") // Remove the # and use normal path
                 .queryParam("token", token)
                 .queryParam("refreshToken", refreshToken)

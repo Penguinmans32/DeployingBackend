@@ -68,7 +68,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             String refreshToken = jwtService.generateRefreshToken(user);
 
             String redirectUrl = UriComponentsBuilder
-                    .fromUriString("https://penguinman.me")
+                    .fromUriString("https://savorspace.systems")
                     .path("/homepage")
                     .queryParam("token", token)
                     .queryParam("refreshToken", refreshToken)
@@ -84,7 +84,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
         } catch (Exception e) {
             logger.error("Error in OAuth2 success handler", e);
-            response.sendRedirect("https://penguinman.me/homepage?error=authentication_failed");
+            response.sendRedirect("https://savorspace.systems/homepage?error=authentication_failed");
         }
     }
 }

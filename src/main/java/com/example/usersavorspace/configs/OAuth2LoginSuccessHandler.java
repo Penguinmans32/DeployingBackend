@@ -65,13 +65,27 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             String token = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
 
-            // Build redirect URL with encoded parameters
+            // Set tokens in cookies
+            Cookie tokenCookie = new Cookie("authToken", token);
+            tokenCookie.setHttpOnly(true);
+            tokenCookie.setSecure(true);
+            tokenCookie.setPath("/");
+            tokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
+            response.addCookie(tokenCookie);
+
+            Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
+            refreshTokenCookie.setHttpOnly(true);
+            refreshTokenCookie.setSecure(true);
+            refreshTokenCookie.setPath("/");
+            refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
+            response.addCookie(refreshTokenCookie);
+
+            // Build redirect URL
             String redirectUrl = UriComponentsBuilder
                     .fromUriString("https://savorspace.systems")
                     .path("/homepage")
-                    .queryParam("token", token)
-                    .queryParam("refreshToken", refreshToken)
-                    .encode()
+                    .queryParam("token", URLEncoder.encode(token, StandardCharsets.UTF_8))
+                    .queryParam("refreshToken", URLEncoder.encode(refreshToken, StandardCharsets.UTF_8))
                     .build()
                     .toUriString();
 

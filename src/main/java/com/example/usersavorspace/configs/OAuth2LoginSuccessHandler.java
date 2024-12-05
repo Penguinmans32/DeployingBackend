@@ -4,6 +4,7 @@ import com.example.usersavorspace.entities.User;
 import com.example.usersavorspace.services.JwtService;
 import com.example.usersavorspace.services.UserService;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -22,7 +23,6 @@ import java.util.UUID;
 
 @Component
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
-
     private final JwtService jwtService;
     private final UserService userService;
     private static final Logger logger = LoggerFactory.getLogger(OAuth2LoginSuccessHandler.class);
@@ -52,8 +52,6 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 picture = oauth2User.getAttribute("picture");
             }
 
-            logger.debug("OAuth2 login success for email: {}", email);
-
             User user = userService.findByEmail(email).orElseGet(() -> {
                 User newUser = new User();
                 newUser.setEmail(email);
@@ -67,31 +65,34 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             String token = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
 
-            // Create the base URL first
-            String baseUrl = "https://savorspace.systems/homepage";
-
-            // Encode tokens separately
+            // Encode the tokens properly
             String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
             String encodedRefreshToken = URLEncoder.encode(refreshToken, StandardCharsets.UTF_8);
 
-            // Build the complete URL manually
-            String redirectUrl = baseUrl +
-                    "?token=" + encodedToken +
-                    "&refreshToken=" + encodedRefreshToken;
+            // Build the redirect URL manually
+            String baseUrl = "https://savorspace.systems";
+            String redirectUrl = String.format("%s/auth-callback?token=%s&refreshToken=%s",
+                    baseUrl, encodedToken, encodedRefreshToken);
 
-            logger.debug("Redirecting to: {}", redirectUrl);
+            // Set tokens in cookies instead of headers
+            addTokenCookie(response, "auth_token", token);
+            addTokenCookie(response, "refresh_token", refreshToken);
 
-            // Set response headers
-            response.setHeader("Authorization", "Bearer " + token);
-            response.setHeader("Refresh-Token", refreshToken);
-            response.setHeader("Access-Control-Expose-Headers", "Authorization, Refresh-Token");
-
-            // Perform redirect
+            // Perform the redirect
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
 
         } catch (Exception e) {
             logger.error("Error in OAuth2 success handler", e);
-            response.sendRedirect("https://savorspace.systems/homepage?error=authentication_failed");
+            response.sendRedirect("https://savorspace.systems/login?error=authentication_failed");
         }
+    }
+
+    private void addTokenCookie(HttpServletResponse response, String name, String value) {
+        Cookie cookie = new Cookie(name, value);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
+        response.addCookie(cookie);
     }
 }

@@ -6,6 +6,7 @@ import com.example.usersavorspace.services.JwtService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,8 +31,10 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
@@ -86,7 +89,7 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/error","/auth/login", "/auth/signup", "/auth/refresh-token",
+                        .requestMatchers("/login","/error","/auth/login", "/auth/signup", "/auth/refresh-token",
                                 "/auth/email", "/auth/login-admin", "/auth/create-admin",
                                 "/auth/reactivate", "/auth/deactivate", "/auth/forgot-password",
                                 "/oauth2/**", "/login/oauth2/code/*").permitAll()
@@ -108,7 +111,12 @@ public class SecurityConfiguration {
                         .redirectionEndpoint(redirection -> redirection
                                 .baseUri("/login/oauth2/code/*"))
                         .userInfoEndpoint(userInfo -> userInfo
-                                .userService(compositeOAuth2UserService())
+                                .userService(compositeOAuth2UserService()))
+                                .successHandler(oAuth2LoginSuccessHandler)
+                                .failureHandler(((request, response, exception) -> {
+                                    log.error("OAuth2 login failure", exception);
+                                    response.sendRedirect("https://savorspace.systems/homepage?error=login_failed");
+                                })
                         )
                         .successHandler((request, response, authentication) -> {
                             String clientRegistrationId = ((OAuth2AuthenticationToken) authentication)
@@ -175,6 +183,15 @@ public class SecurityConfiguration {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:5173", "https://penguinman.me", "https://penguinman-backend-production.up.railway.app", "https://savorspace.systems")); // Allow requests from this origin
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers"
+        ));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
         //Add exposed headers

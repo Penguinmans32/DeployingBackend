@@ -65,31 +65,15 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             String token = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
 
-            // Create state parameter to prevent CSRF
-            String state = UUID.randomUUID().toString();
-
-            // Build redirect URL with properly encoded parameters
+            // Build redirect URL with encoded parameters
             String redirectUrl = UriComponentsBuilder
-                    .fromHttpUrl("https://savorspace.systems")
-                    .path("/auth-callback")
+                    .fromUriString("https://savorspace.systems")
+                    .path("/homepage")
                     .queryParam("token", token)
                     .queryParam("refreshToken", refreshToken)
-                    .queryParam("state", state)
                     .encode()
+                    .build()
                     .toUriString();
-
-            // Set tokens in cookies as backup
-            Cookie tokenCookie = new Cookie("auth_token", token);
-            tokenCookie.setHttpOnly(true);
-            tokenCookie.setSecure(true);
-            tokenCookie.setPath("/");
-            response.addCookie(tokenCookie);
-
-            Cookie refreshTokenCookie = new Cookie("refresh_token", refreshToken);
-            refreshTokenCookie.setHttpOnly(true);
-            refreshTokenCookie.setSecure(true);
-            refreshTokenCookie.setPath("/");
-            response.addCookie(refreshTokenCookie);
 
             logger.info("Redirecting to: {}", redirectUrl);
 
